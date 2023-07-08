@@ -1,17 +1,20 @@
 import random
 import math
+import io
 
 def Activation(weightedOutput:float):
-    if(weightedOutput > 50.0):
-        return 1.0
-    elif(weightedOutput < -100):
-        return 0.0
-    else:
         return (1.0 / (1.0 + math.exp(-weightedOutput)))
 
 def nodeCost(outputActivation:float, expectedOutput:float):
        error = outputActivation - expectedOutput
        return (error * error)
+
+def get_random_sample(datapoint_list, sample_size):
+    if sample_size >= len(datapoint_list):
+        return datapoint_list  # Return the entire list if the sample size is equal to or larger than the list size
+    else:
+        indices = random.sample(range(len(datapoint_list)), sample_size)
+        return [datapoint_list[i] for i in indices]
 
 class Datapoint:
     def __init__(self, expectedOutput:list[float], inputs:list[float]):
@@ -27,12 +30,7 @@ class Layer:
         self.bias = [random.uniform(-1.0, 1.0) for _ in range(numOutputs)]
         self.weightCostGradient = [[1.0 for _ in range(numOutputs)] for _ in range(numInputs)]
         self.biasCostGradient = [1.0 for _ in range(numOutputs)]
-    
-    def PrintLayer(self):
-        print("Weights", self.weights)
-        print("Biases", self.bias)
-        #print("Weight Gradient", self.weightCostGradient)
-        #print("Bias Gradient", self.biasCostGradient)
+
 
     def CalculateOutputs(self, inputs:list[float]):
         activations = []
@@ -57,8 +55,16 @@ class Network:
             self.layers.append(layer)
 
     def PrintNetwork(self):
+        i = 0
+        string_output = io.StringIO()
         for layer in self.layers:
-            layer.PrintLayer()
+            print("Layer:", i, file=string_output)
+            print("Weights:", layer.weights, file=string_output)
+            print("Biases:", layer.bias, file=string_output)
+        NetworkString = string_output.getvalue()
+        string_output.close()
+        return NetworkString
+            
 
     def CalculateOutputs(self, inputs:list[float]):
         for layer in self.layers:
@@ -83,21 +89,26 @@ class Network:
         return totalCost / len(datapoints)
     
     def Learn(self, trainingSet:list[Datapoint], learnRate:float):
-        h = 0.00001
+        h = 0.000001
         initalCost = self.AverageCost(trainingSet)
         for layer in self.layers:
             for nodeIn in range(layer.numInputs):
                 for nodeOut in range(layer.numOutputs):
+                    temp = layer.weights[nodeIn][nodeOut]
                     layer.weights[nodeIn][nodeOut] += h
                     deltaCost = self.AverageCost(trainingSet) - initalCost
-                    layer.weights[nodeIn][nodeOut] -= h
-                    layer.weightCostGradient[nodeIn][nodeOut] += deltaCost / h
-
+                    layer.weights[nodeIn][nodeOut] = temp
+                    layer.weightCostGradient[nodeIn][nodeOut] = deltaCost / h
             for bias in range(len(layer.bias)):
+                temp = layer.bias[bias]
                 layer.bias[bias] += h
                 deltaCost = self.AverageCost(trainingSet) - initalCost
-                layer.bias[bias] -= h
+                layer.bias[bias] = temp
                 layer.biasCostGradient[bias] = deltaCost / h
+        self.ApplyGradients(learnRate)
+    
+    def ApplyGradients(self, learnRate):
+        for layer in self.layers:
             layer.ApplyGradient(learnRate)
 
     def write_weights_bias_to_file(self, file_path: str):
@@ -128,3 +139,6 @@ class Network:
                 elif line == "Biases:":
                     biases = [float(value) for value in file.readline().strip().split()]
                     self.layers[layer_index - 1].bias = biases
+
+
+
