@@ -6,7 +6,7 @@ import threading
 import time
 
 
-network = NN.Network([2,3,3,2])
+network = NN.Network([2,50,50,2])
 
 Size = 1.0        # Size of coordinate plot
 PixelSize = 750   # Pixel size of image
@@ -33,7 +33,7 @@ for line in lines:
 
 def draw_network():
     # Convert the modified image to Tkinter-compatible format
-    tk_image = gui.getNetworkImage(network, Size, 0.01, PixelSize, datapoints)
+    tk_image = gui.getNetworkImage(network, Size, 0.005, PixelSize, datapoints)
     # Update the label with the modified image
     lblImage.config(image=tk_image)
     lblImage.image = tk_image  # Keep a reference to prevent garbage collection
@@ -44,8 +44,8 @@ def save_network():
 def network_learn():
     while isLearning == True:
         print("learning", network.AverageCost(datapoints))
-        for i in range(100):
-            network.Learn(NN.get_random_sample(datapoints, int(len(datapoints) / 2)), 0.3)
+        for i in range(100000):
+            network.Learn(NN.get_random_sample(datapoints, int(len(datapoints) / 2)), 0.2)
 
 def update_screen():
     while 1:

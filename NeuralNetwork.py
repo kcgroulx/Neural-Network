@@ -2,12 +2,20 @@ import random
 import math
 import io
 
-def Activation(weightedOutput:float):
-        return (1.0 / (1.0 + math.exp(-weightedOutput)))
+def Activation(weightedInput:float):
+    return (1.0 / (1.0 + math.exp(-weightedInput)))
+
+def ActivationDerivative(weightedInput:float):
+    activation = Activation(weightedInput)
+    return activation * (1.0 - activation)
+
 
 def nodeCost(outputActivation:float, expectedOutput:float):
        error = outputActivation - expectedOutput
        return (error * error)
+
+def nodeCostDerivative(outputActivation:float, expectedOutput:float):
+    return 2 * (outputActivation - expectedOutput)
 
 def get_random_sample(datapoint_list, sample_size):
     if sample_size >= len(datapoint_list):
@@ -31,16 +39,58 @@ class Layer:
         self.weightCostGradient = [[1.0 for _ in range(numOutputs)] for _ in range(numInputs)]
         self.biasCostGradient = [1.0 for _ in range(numOutputs)]
 
+        # Data for learning
+        self.inputs = [1.0 for _ in range(numInputs)]
+        self.weightedInputs = [1.0 for _ in range(numOutputs)]
+        self.activations = [1.0 for _ in range(numOutputs)]
+
+    def ClearGradients(self):
+        for i in range(self.numOutputs):
+            for j in range(self.numInputs):
+                self.weightCostGradient[j][i] = 0.0
+            self.biasCostGradient[i] = 0.0
 
     def CalculateOutputs(self, inputs:list[float]):
-        activations = []
+        self.inputs = inputs
         for nodeOut in range(self.numOutputs):
-            weightedOutput = self.bias[nodeOut]
+            weightedInput = self.bias[nodeOut]
             for nodeIn in range(self.numInputs):
-                weightedOutput += inputs[nodeIn] * self.weights[nodeIn][nodeOut]
-            activations.append(Activation(weightedOutput))
-        return activations
+                weightedInput += inputs[nodeIn] * self.weights[nodeIn][nodeOut]
+            self.weightedInputs[nodeOut] = weightedInput
+            self.activations[nodeOut] = Activation(weightedInput)
+        return self.activations
     
+    def CalculateOutputLayerNodeValues(self, expectedOutputs:list[float]):
+        nodeValues = []
+        for i in range(len(expectedOutputs)):
+            costDerivative = nodeCostDerivative(self.activations[i], expectedOutputs[i])
+            activationDerivative = ActivationDerivative(self.weightedInputs[i])
+            nodeValues.append(costDerivative * activationDerivative)
+        return nodeValues
+    
+    def CalculateHiddenLayerNodeValues(self, oldLayer:'Layer', oldNodeValues:list[float]):
+        newNodeValues = []
+        for newNodeIndex in range(0, self.numOutputs):
+            newNodeValue = 0
+            for oldNodeIndex in range(0, len(oldNodeValues)):
+                weightedInputDerivative = oldLayer.weights[newNodeIndex][oldNodeIndex]
+                newNodeValue += weightedInputDerivative * oldNodeValues[oldNodeIndex]
+            newNodeValue *= ActivationDerivative(self.weightedInputs[newNodeIndex])
+            newNodeValues.append(newNodeValue)
+        return newNodeValues
+
+
+    def UpdateGradients(self, nodeValues:list[float]):
+        # Update weight cost gradient
+        for nodeOut in range(self.numOutputs):
+            for nodeIn in range(self.numInputs):
+                derivativeCostWrtWeight = self.inputs[nodeIn] * nodeValues[nodeOut]
+                self.weightCostGradient[nodeIn][nodeOut] += derivativeCostWrtWeight
+            # Update bias cost gradient
+            derivativeCostWrtBias = nodeValues[nodeOut]
+            self.biasCostGradient[nodeOut] += derivativeCostWrtBias
+            
+            
     def ApplyGradient(self, learnRate:float):
         for nodeOut in range(self.numOutputs):
             self.bias[nodeOut] -= self.biasCostGradient[nodeOut] * learnRate
@@ -65,6 +115,17 @@ class Network:
         string_output.close()
         return NetworkString
             
+    def UpdateAllGradients(self, datapoint:Datapoint):
+        self.CalculateOutputs(datapoint.inputs)
+
+        outputLayer = self.layers[-1]
+        nodeValues = outputLayer.CalculateOutputLayerNodeValues(datapoint.expectedOutput)
+        outputLayer.UpdateGradients(nodeValues)
+
+        for hiddenLayerIndex in range(len(self.layers) - 2, 0, -1):
+            nodeValues = self.layers[hiddenLayerIndex].CalculateHiddenLayerNodeValues(self.layers[hiddenLayerIndex + 1], nodeValues)
+            self.layers[hiddenLayerIndex].UpdateGradients(nodeValues)
+
 
     def CalculateOutputs(self, inputs:list[float]):
         for layer in self.layers:
@@ -73,7 +134,11 @@ class Network:
     
     def Classify(self, inputs:list[float]):
         output = self.CalculateOutputs(inputs)
-        return output.index(max(output))
+        IndexOfMax = 0
+        for i in range(len(output)):
+            if (output[i] > output[IndexOfMax]):
+                IndexOfMax = i
+        return IndexOfMax
     
     def Cost(self, datapoint:Datapoint):
         outputs = self.CalculateOutputs(datapoint.inputs)
@@ -88,7 +153,14 @@ class Network:
             totalCost += self.Cost(datapoint)
         return totalCost / len(datapoints)
     
-    def Learn(self, trainingSet:list[Datapoint], learnRate:float):
+
+    def Learn(self, datapoints:list[Datapoint], learnrate:float):
+        for datapoint in datapoints:
+            self.UpdateAllGradients(datapoint)
+        self.ApplyAllGradients(learnrate / len(datapoints))
+        self.ClearAllGradients()
+
+    def OldLearn(self, trainingSet:list[Datapoint], learnRate:float):
         h = 0.000001
         initalCost = self.AverageCost(trainingSet)
         for layer in self.layers:
@@ -105,11 +177,15 @@ class Network:
                 deltaCost = self.AverageCost(trainingSet) - initalCost
                 layer.bias[bias] = temp
                 layer.biasCostGradient[bias] = deltaCost / h
-        self.ApplyGradients(learnRate)
+        self.ApplyAllGradients(learnRate)
     
-    def ApplyGradients(self, learnRate):
+    def ApplyAllGradients(self, learnRate):
         for layer in self.layers:
             layer.ApplyGradient(learnRate)
+
+    def ClearAllGradients(self):
+        for layer in self.layers:
+            layer.ClearGradients()
 
     def write_weights_bias_to_file(self, file_path: str):
         with open(file_path, 'w') as file:
