@@ -38,13 +38,13 @@ def draw_network():
     lblImage.image = tk_image  # Keep a reference to prevent garbage collection
 
 def save_network():
-    network.write_weights_bias_to_file("NeuralNetwork.txt")
+    network.WriteNetworkToFile("NeuralNetwork.txt")
     
 def network_learn():
     while isLearning == True:
         print("learning", network.AverageCost(datapoints))
         for i in range(100):
-            network.Learn(datapoints, 0.3)
+            network.Learn(datapoints, 2)
 
 def update_screen():
     while 1:

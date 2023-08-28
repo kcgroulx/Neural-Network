@@ -2,13 +2,14 @@ import random
 import math
 import io
 
+# Sigmoid Activation Function
 def Activation(weightedInput:float):
     return (1.0 / (1.0 + math.exp(-weightedInput)))
 
+# Derivative of Sigmoid Activation Function
 def ActivationDerivative(weightedInput:float):
     activation = Activation(weightedInput)
     return activation * (1.0 - activation)
-
 
 def nodeCost(outputActivation:float, expectedOutput:float):
        error = outputActivation - expectedOutput
@@ -16,6 +17,17 @@ def nodeCost(outputActivation:float, expectedOutput:float):
 
 def nodeCostDerivative(outputActivation:float, expectedOutput:float):
     return 2 * (outputActivation - expectedOutput)
+
+def FindMaxIndex(input_list:list):
+    if len(input_list) == 0:
+        return None
+    max_index = 0
+    max_value = input_list[0]
+    for i in range(1, len(input_list)):
+        if input_list[i] > max_value:
+            max_value = input_list[i]
+            max_index = i
+    return max_index
 
 def get_random_sample(datapoint_list, sample_size):
     if sample_size >= len(datapoint_list):
@@ -79,7 +91,6 @@ class Layer:
             newNodeValues.append(newNodeValue)
         return newNodeValues
 
-
     def UpdateGradients(self, nodeValues:list[float]):
         # Update weight cost gradient
         for nodeOut in range(self.numOutputs):
@@ -89,8 +100,7 @@ class Layer:
             # Update bias cost gradient
             derivativeCostWrtBias = nodeValues[nodeOut]
             self.biasCostGradient[nodeOut] += derivativeCostWrtBias
-            
-            
+              
     def ApplyGradient(self, learnRate:float):
         for nodeOut in range(self.numOutputs):
             self.bias[nodeOut] -= self.biasCostGradient[nodeOut] * learnRate
@@ -153,32 +163,12 @@ class Network:
             totalCost += self.Cost(datapoint)
         return totalCost / len(datapoints)
     
-
     def Learn(self, datapoints:list[Datapoint], learnrate:float):
         for datapoint in datapoints:
             self.UpdateAllGradients(datapoint)
         self.ApplyAllGradients(learnrate / len(datapoints))
         self.ClearAllGradients()
 
-    def OldLearn(self, trainingSet:list[Datapoint], learnRate:float):
-        h = 0.000001
-        initalCost = self.AverageCost(trainingSet)
-        for layer in self.layers:
-            for nodeIn in range(layer.numInputs):
-                for nodeOut in range(layer.numOutputs):
-                    temp = layer.weights[nodeIn][nodeOut]
-                    layer.weights[nodeIn][nodeOut] += h
-                    deltaCost = self.AverageCost(trainingSet) - initalCost
-                    layer.weights[nodeIn][nodeOut] = temp
-                    layer.weightCostGradient[nodeIn][nodeOut] = deltaCost / h
-            for bias in range(len(layer.bias)):
-                temp = layer.bias[bias]
-                layer.bias[bias] += h
-                deltaCost = self.AverageCost(trainingSet) - initalCost
-                layer.bias[bias] = temp
-                layer.biasCostGradient[bias] = deltaCost / h
-        self.ApplyAllGradients(learnRate)
-    
     def ApplyAllGradients(self, learnRate):
         for layer in self.layers:
             layer.ApplyGradient(learnRate)
@@ -187,7 +177,14 @@ class Network:
         for layer in self.layers:
             layer.ClearGradients()
 
-    def write_weights_bias_to_file(self, file_path: str):
+    def GetAccuracy(self, datapoints:list[Datapoint]):
+        correct = 0
+        for datapoint in datapoints:
+            if( self.Classify(datapoint.inputs) == FindMaxIndex(datapoint.expectedOutput) ):
+                correct += 1
+        return correct / len(datapoints)
+
+    def WriteNetworkToFile(self, file_path: str):
         with open(file_path, 'w') as file:
             for layer in self.layers:
                 file.write(f"Layer {self.layers.index(layer) + 1}\n")
@@ -199,7 +196,7 @@ class Network:
                 file.write(' '.join(str(b) for b in layer.bias))
                 file.write('\n')
 
-    def read_weights_bias_from_file(self, file_path: str):
+    def ReadNetworkFromFile(self, file_path: str):
         with open(file_path, 'r') as file:
             layer_index = 0
             for line in file:

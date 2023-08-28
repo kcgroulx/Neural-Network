@@ -9,7 +9,7 @@ import time
 network = NN.Network([2,50,50,2])
 
 Size = 1.0        # Size of coordinate plot
-PixelSize = 750   # Pixel size of image
+PixelSize = 750    # Pixel size of image
 isLearning = False
 
 # Open the file
@@ -33,13 +33,13 @@ for line in lines:
 
 def draw_network():
     # Convert the modified image to Tkinter-compatible format
-    tk_image = gui.getNetworkImage(network, Size, 0.005, PixelSize, datapoints)
+    tk_image = gui.getNetworkImage(network, Size, 0.01, PixelSize, datapoints)
     # Update the label with the modified image
     lblImage.config(image=tk_image)
     lblImage.image = tk_image  # Keep a reference to prevent garbage collection
 
 def save_network():
-    network.write_weights_bias_to_file("NeuralNetwork.txt")
+    network.WriteNetworkToFile("NeuralNetwork.txt")
     
 def network_learn():
     while isLearning == True:
