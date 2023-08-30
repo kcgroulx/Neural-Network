@@ -18,7 +18,7 @@ print("Loading dataset...")
 for index in range(0, len(images) - 3000):
     expectedOutput = []
     inputs = []
-    image = Matrix.RandomImageTransform(images[index], 20, 3)
+    image = Matrix.RandomImageTransform(images[index], 15, 3)
     for _ in range(10):
         expectedOutput.append(0.0)
     expectedOutput[ int(labels[index]) ] = 1.0
@@ -46,13 +46,15 @@ for index in range(57000, 60000):
 
 print("Dataset Loaded")
 print("Learning...")
+
 learnrate = 0.1
+regularization = 0.0
+momentum = 0.9
 for j in range(0, 100):
-    for i in range(0, 100):
-        sample = NN.get_random_sample(datapoints, int(len(datapoints) / 500))
-        network.Learn(sample, learnrate)
+    for i in range(0, 10):
+        sample = NN.get_random_sample(datapoints, int(len(datapoints) / 1000))
+        network.Learn(sample, learnrate, regularization, momentum)
     print(f"{j} Accuracy: {network.GetAccuracy(testingData):.4f} ")
-    #learnrate *= 0.90
     network.WriteNetworkToFile('digitsNetwork.txt')
 
 print("Done Learning")
