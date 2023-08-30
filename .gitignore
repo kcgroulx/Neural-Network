@@ -1,3 +1,5 @@
-
 *.json
 *.pyc
+myenv/
+venv/
+image.jpg

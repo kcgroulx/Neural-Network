@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageOps
 import NeuralNetwork as NN
 
-network = NN.Network([784,100,10])
+network = NN.Network([784,200,10])
 network.ReadNetworkFromFile('digitsNetwork.txt')
 drawing = Image.new("L", (200, 200), color=0)
 draw = ImageDraw.Draw(drawing)
