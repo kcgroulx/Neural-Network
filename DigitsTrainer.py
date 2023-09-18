@@ -6,8 +6,10 @@ import Matrix
 images = ReadIDX.read_idx_images('train-images.idx3-ubyte')
 labels = ReadIDX.read_idx_labels('train-labels.idx1-ubyte')
 
+dataset = 'digitsNetwork1.txt'
+
 network = NN.Network([784,200,10])
-network.ReadNetworkFromFile('digitsNetwork.txt')
+network.ReadNetworkFromFile(dataset)
 
 datapoints = []
 testingData = []
@@ -15,7 +17,9 @@ testingData = []
 
 print("Loading dataset...")
 # Gets dataset
-for index in range(0, len(images) - 3000):
+for index in range(0, 50000):
+    if (index % 100 == 0):
+        print(f"Progress: {(index/50000) * 100:.2f}%", end='\r')
     expectedOutput = []
     inputs = []
     image = Matrix.RandomImageTransform(images[index], 15, 3)
@@ -30,7 +34,7 @@ for index in range(0, len(images) - 3000):
     datapoints.append(datapoint)
 
 # Gets testingDataset
-for index in range(57000, 60000):
+for index in range(50000, 60000):
     expectedOutput = []
     inputs = []
     image = images[index]
@@ -48,14 +52,13 @@ print("Dataset Loaded")
 print("Learning...")
 
 learnrate = 0.1
-regularization = 0.0
 momentum = 0.9
 for j in range(0, 100):
     for i in range(0, 10):
         sample = NN.get_random_sample(datapoints, int(len(datapoints) / 1000))
-        network.Learn(sample, learnrate, regularization, momentum)
+        network.Learn(sample, learnrate, momentum)
     print(f"{j} Accuracy: {network.GetAccuracy(testingData):.4f} ")
-    network.WriteNetworkToFile('digitsNetwork.txt')
+    network.WriteNetworkToFile(dataset)
 
 print("Done Learning")
     

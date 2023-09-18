@@ -115,22 +115,18 @@ class Layer:
             self.biasCostGradient[nodeOut] += derivativeCostWrtBias
 
     # Applys gradients to weights and biases     
-    def ApplyGradient(self, learnRate:float, regularization:float, momentum:float):
-        weightDecay = 1.0 - regularization * learnRate
+    def ApplyGradient(self, learnRate:float, momentum:float):
         # Applies gradients for weights
         for nodeOut in range(self.numOutputs):
             for nodeIn in range(self.numInputs):
-                weight = self.weights[nodeIn][nodeOut]
-                velocity = self.weightVelocities[nodeIn][nodeOut] * momentum - self.weightCostGradient[nodeIn][nodeOut] * learnRate
-                self.weightVelocities[nodeIn][nodeOut] = velocity
-                self.weights[nodeIn][nodeOut] = weight * weightDecay + velocity
+                self.weightVelocities[nodeIn][nodeOut] = self.weightVelocities[nodeIn][nodeOut] * momentum + self.weightCostGradient[nodeIn][nodeOut] * learnRate
+                self.weights[nodeIn][nodeOut] -= self.weightVelocities[nodeIn][nodeOut]
                 self.weightCostGradient[nodeIn][nodeOut] = 0.0
         
         # Applies gradients for biases
         for nodeOut in range(self.numOutputs):
-            velocity = self.biasVelocities[nodeOut] * momentum - self.biasCostGradient[nodeOut] * learnRate
-            self.biasVelocities[nodeOut] = velocity
-            self.bias[nodeOut] += velocity
+            self.biasVelocities[nodeOut] = self.biasVelocities[nodeOut] * momentum + self.biasCostGradient[nodeOut] * learnRate
+            self.bias[nodeOut] -= self.biasVelocities[nodeOut]
             self.biasCostGradient[nodeOut] = 0.0
 
         
@@ -176,14 +172,15 @@ class Network:
             totalCost += self.Cost(datapoint)
         return totalCost / len(datapoints)
     
-    def Learn(self, datapoints:list[Datapoint], learnrate:float, regularization:float, momentum:float):
+    def Learn(self, datapoints:list[Datapoint], learnrate:float, momentum:float):
         # Updates gradients based on given datapoints
         for datapoint in datapoints:
             self.UpdateAllGradients(datapoint)
+            # Updates
+            for layer in self.layers:
+                layer.ApplyGradient(learnrate, momentum) 
         
-        # Updates
-        for layer in self.layers:
-            layer.ApplyGradient(learnrate / len(datapoints), regularization, momentum) 
+        
 
     def GetAccuracy(self, datapoints:list[Datapoint]):
         correct = 0
